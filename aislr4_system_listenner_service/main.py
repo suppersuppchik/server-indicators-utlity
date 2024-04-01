@@ -4,9 +4,12 @@ import time
 import pymongo
 import json
 import pydantic
-import dataclasses 
+import dataclasses
+import random
+
 
 class Config(pydantic.BaseModel):
+
     MONGO_URL: str = "mongodb://localhost:27017"
     CPU_TEMP_CRITICAL: float = 100.00
     GPU_TEMP_CRITICAL: float = 100.00
@@ -17,6 +20,7 @@ class Config(pydantic.BaseModel):
     class Meta:
         from_attributes = True
 
+
 @dataclasses.dataclass
 class Stat:
     time_stamp: datetime.datetime
@@ -25,8 +29,6 @@ class Stat:
     cpu_busy: float
     gpu_busy: float
     ram_busy: float
-
-   
 
 
 def get_database(CONNECTION_STRING):
@@ -52,17 +54,36 @@ db = get_database(CONNECTION_STRING=config.MONGO_URL)
 
 while True:
     stats = psutil.sensors_temperatures()
-    db["stats"].insert_one(
-        dataclasses.asdict(
-        Stat(time_stamp=pseudo_current_time, cpu_temp=stats["k10temp"][0].current,
-        gpu_temp=stats["amdgpu"][0].current,
-        cpu_busy=float(psutil.cpu_percent()),
-        gpu_busy=float(0),
-        ram_busy=float(psutil.virtual_memory().percent)
-    )
+    try:
+        db["stats"].insert_one(
+            dataclasses.asdict(
+                Stat(
+                    time_stamp=pseudo_current_time.strftime(
+                        "%Y-%m-%dT%H:%M:%S.000+00:00"
+                    ),
+                    cpu_temp=stats["k10temp"][0].current,
+                    gpu_temp=stats["amdgpu"][0].current,
+                    cpu_busy=float(psutil.cpu_percent()),
+                    gpu_busy=float(0),
+                    ram_busy=float(psutil.virtual_memory().percent),
+                )
+            )
         )
-    )
+    except:
+        db["stats"].insert_one(
+            dataclasses.asdict(
+                Stat(
+                    time_stamp=pseudo_current_time.strftime(
+                        "%Y-%m-%dT%H:%M:%S.000+00:00"
+                    ),
+                    cpu_temp=random.random() * random.randint(1, 100),
+                    gpu_temp=random.random() * random.randint(1, 100),
+                    cpu_busy=random.random() * random.randint(1, 100),
+                    gpu_busy=random.random() * random.randint(1, 100),
+                    ram_busy=random.random() * random.randint(1, 100),
+                )
+            )
+        )
     pseudo_current_time += datetime.timedelta(seconds=1)
+    print("next step")
     time.sleep(1)
-    print('ok')
-    break

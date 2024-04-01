@@ -1,9 +1,10 @@
-CONTAINERS=-f mongodb -f statsapi -f systemlistener
+CONTAINERS=-f mongodb -f statsapi 
 MAIN_COMPOSE=./docker-compose.yml
-IMAGES := mongodb statsapi systemlistener
+IMAGES := mongodb statsapi 
 COMPOSES=-f $(MAIN_COMPOSE)
 
 up:
+	docker volume create dbdata6
 	docker compose -f $(MAIN_COMPOSE) up -d --force-recreate --build --remove-orphans $(IMAGES) 
 down:
 	docker compose $(COMPOSES) down -v

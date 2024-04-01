@@ -12,3 +12,10 @@ class GetStat(BaseModel):
 
     class Meta:
         from_attributes = True
+
+
+class TimeInterval(BaseModel):
+    interval: str = "hour"
+    
+    class Meta:
+        from_attributes = True
