@@ -15,5 +15,11 @@ services:
     command: "python main.py"
     ports:
       - 8000:8000
+  systemlistener:
+    container_name: systemlistener 
+    build:
+      context: .
+      dockerfile: aislr4_system_listenner_service/Dockerfile
+    command: "python main.py"
 volumes:
   dbdata6:
