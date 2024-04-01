@@ -20,6 +20,39 @@ def get_database(CONNECTION_STRING):
     return client["server_util_db"]
 
 
+def make_stat_list(time_interval: schemas.TimeInterval, db):
+    current_time = datetime.datetime.now()
+    date_end = (
+        datetime.datetime.now()
+        - datetime.timedelta(seconds=5)
+        + datetime.timedelta(hours=3)
+    )
+    if time_interval.interval == "hour":
+
+        date_start = date_end - datetime.timedelta(hours=1)
+    elif time_interval.interval == "minute":
+
+        date_start = date_end - datetime.timedelta(minutes=1)
+    elif time_interval.interval == "day":
+
+        date_start = date_end - datetime.timedelta(days=1)
+    elif time_interval.interval == "week":
+
+        date_start = date_end - datetime.timedelta(days=7)
+    result = list()
+    while date_end != date_start:
+        one_stat = db["stats"].find_one(
+            {"time_stamp": date_end.strftime("%Y-%m-%dT%H:%M:%S.000+00:00")}
+        )
+        if one_stat:
+            result.append(schemas.GetStat(**one_stat))
+            print("->", one_stat)
+        else:
+            print("NO DATA")
+        date_end -= datetime.timedelta(seconds=1)
+    return result
+
+
 config = Config()
 db = get_database(config.MONGO_URL)
 
@@ -43,23 +76,10 @@ async def current_stat():
     return schemas.GetStat(**data)
 
 
-@app.post("/time_interval_values")
-def get_time_interval_values(time_interval: schemas.TimeInterval): 
-    if time_interval.interval=='hour':
-        date_end=datetime.datetime.now()-datetime.timedelta(seconds=5)
-        date_start=date_end-datetime.timedelta(hours=1)
-    elif time_interval.interval=='minute':
-        date_end=datetime.datetime.now()-datetime.timedelta(seconds=5)
-        date_start=date_end-datetime.timedelta(minutes=1)
-    
-    data=db['stats'].find(
-        {"time_stamp":{'$gte':date_start.isoformat(),'$lte':date_end.isoformat()}}
-    )
-    for i in data:
-        print(i)
-    return {}
+@app.post("/time_interval_values", response_model=list[schemas.GetStat])
+def get_time_interval_values(time_interval: schemas.TimeInterval):
 
-
+    return make_stat_list(time_interval=time_interval, db=db)
 
 
 uvicorn.run(app=app, host="0.0.0.0")

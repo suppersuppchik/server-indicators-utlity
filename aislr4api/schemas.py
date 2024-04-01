@@ -16,6 +16,6 @@ class GetStat(BaseModel):
 
 class TimeInterval(BaseModel):
     interval: str = "hour"
-    
+
     class Meta:
         from_attributes = True
