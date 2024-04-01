@@ -1,0 +1,11 @@
+{
+    "MONGO_URL": "mongodb://localhost:27017",
+    "CPU_TEMP_CRITICAL":100,
+    "GPU_TEMP_CRITICAL":100,
+    "CPU_BUSY_CRITICAL" : 75,
+    "GPU_BUSY_CRITICAL" : 75,
+    "RAM_BUSY_CRITICAL" : 75
+
+
+    
+}

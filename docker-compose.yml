@@ -1,0 +1,19 @@
+version: '3.8'
+services:
+  mongodb:
+    container_name: mongodb 
+    image: mongo:6-jammy
+    ports:
+      - '27017:27017'
+    volumes:
+      - dbdata6:/data/db
+  statsapi:
+    container_name: statsapi 
+    build:
+      context: .
+      dockerfile: aislr4api/Dockerfile
+    command: "python main.py"
+    ports:
+      - 8000:8000
+volumes:
+  dbdata6:
