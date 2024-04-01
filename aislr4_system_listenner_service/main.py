@@ -70,6 +70,7 @@ while True:
             )
         )
     except:
+        # Написано для теста если смотришь на другом ПК
         db["stats"].insert_one(
             dataclasses.asdict(
                 Stat(
