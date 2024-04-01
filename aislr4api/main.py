@@ -4,10 +4,21 @@ import schemas
 import pydantic
 import pymongo
 import datetime
-
+from fastapi.middleware.cors import CORSMiddleware
 app = fastapi.FastAPI()
 
+origins = [
+  "*"
+]
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    
+)
 class Config(pydantic.BaseModel):
     MONGO_URL: str = "mongodb://mongodb:27017"
 
@@ -60,15 +71,7 @@ db = get_database(config.MONGO_URL)
 @app.get("/current_stat", response_model=schemas.GetStat)
 async def current_stat():
     current_time = datetime.datetime.now()
-    pseudo_current_time = datetime.datetime(
-        year=current_time.year,
-        month=current_time.month,
-        day=current_time.day,
-        hour=current_time.hour + 3,
-        minute=current_time.minute,
-        second=current_time.second - 5,
-        microsecond=0,
-    )
+    pseudo_current_time = current_time+datetime.timedelta(hours=3)-datetime.timedelta(seconds=5)
 
     data = db["stats"].find_one(
         {"time_stamp": pseudo_current_time.strftime("%Y-%m-%dT%H:%M:%S.000+00:00")}
@@ -81,5 +84,7 @@ def get_time_interval_values(time_interval: schemas.TimeInterval):
 
     return make_stat_list(time_interval=time_interval, db=db)
 
+# @app.post('set_ctitycal/')
+#     return {}
 
 uvicorn.run(app=app, host="0.0.0.0")

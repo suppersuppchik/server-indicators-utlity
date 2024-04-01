@@ -6,7 +6,7 @@ import json
 import pydantic
 import dataclasses
 import random
-
+import threading
 
 class Config(pydantic.BaseModel):
 
@@ -55,17 +55,21 @@ db = get_database(CONNECTION_STRING=config.MONGO_URL)
 while True:
     stats = psutil.sensors_temperatures()
     try:
+        stat={
+            'time_stamp':pseudo_current_time.strftime(
+                        "%Y-%m-%dT%H:%M:%S.000+00:00"
+                    ),
+            'cpu_temp':stats["k10temp"][0].current,
+            'gpu_temp':stats["amdgpu"][0].current,
+            'cpu_busy':float(psutil.cpu_percent()),
+            'gpu_busy':float(0),
+            'ram_busy':float(psutil.virtual_memory().percent),
+        }
+        
         db["stats"].insert_one(
             dataclasses.asdict(
                 Stat(
-                    time_stamp=pseudo_current_time.strftime(
-                        "%Y-%m-%dT%H:%M:%S.000+00:00"
-                    ),
-                    cpu_temp=stats["k10temp"][0].current,
-                    gpu_temp=stats["amdgpu"][0].current,
-                    cpu_busy=float(psutil.cpu_percent()),
-                    gpu_busy=float(0),
-                    ram_busy=float(psutil.virtual_memory().percent),
+                   **stat
                 )
             )
         )
