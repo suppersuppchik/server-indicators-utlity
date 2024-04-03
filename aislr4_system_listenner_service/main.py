@@ -2,12 +2,16 @@ import psutil
 import datetime
 import time
 import pymongo
-import json
 import pydantic
 import dataclasses
 import random
-import threading
+import requests
+import os
+import dotenv
 
+dotenv.load_dotenv('./.env')
+BOT_TOKEN=os.getenv('BOT_TOKEN')
+print(BOT_TOKEN)
 class Config(pydantic.BaseModel):
 
     MONGO_URL: str = "mongodb://localhost:27017"
@@ -32,9 +36,7 @@ class Stat:
 
 
 def get_database(CONNECTION_STRING):
-
     client = pymongo.MongoClient(CONNECTION_STRING)
-
     return client["server_util_db"]
 
 
@@ -51,13 +53,14 @@ pseudo_current_time = datetime.datetime(
 )
 
 db = get_database(CONNECTION_STRING=config.MONGO_URL)
-
+is_alerting=False
 while True:
     stats = psutil.sensors_temperatures()
+    
     try:
         stat={
             'time_stamp':pseudo_current_time.strftime(
-                        "%Y-%m-%dT%H:%M:%S.000+00:00"
+                        "%Y-%m-%dT%H:%M:%S"
                     ),
             'cpu_temp':stats["k10temp"][0].current,
             'gpu_temp':stats["amdgpu"][0].current,
@@ -65,14 +68,17 @@ while True:
             'gpu_busy':float(0),
             'ram_busy':float(psutil.virtual_memory().percent),
         }
-        
-        db["stats"].insert_one(
-            dataclasses.asdict(
-                Stat(
+        data=  Stat(
                    **stat
                 )
+      
+            
+        db["stats"].insert_one(
+            dataclasses.asdict(
+                data
             )
         )
+       
     except:
         # Написано для теста если смотришь на другом ПК
         db["stats"].insert_one(
@@ -89,6 +95,14 @@ while True:
                 )
             )
         )
+    if not is_alerting:
+            crit= db["critical"].find_one({'type':'params'})['CPU_TEMP_CRITICAL']
+            print('crit',type(crit),type(stat['cpu_temp']))
+            if stat['cpu_temp'] > crit:
+                print('Превышение')
+                is_alerting=True
+                resp=requests.get(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage?text=Превышение&chat_id=762835261")
+                print(resp)
     pseudo_current_time += datetime.timedelta(seconds=1)
     print("next step")
     time.sleep(1)

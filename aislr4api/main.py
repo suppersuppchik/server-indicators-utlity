@@ -5,6 +5,7 @@ import pydantic
 import pymongo
 import datetime
 from fastapi.middleware.cors import CORSMiddleware
+import time 
 app = fastapi.FastAPI()
 
 origins = [
@@ -53,7 +54,7 @@ def make_stat_list(time_interval: schemas.TimeInterval, db):
     result = list()
     while date_end != date_start:
         one_stat = db["stats"].find_one(
-            {"time_stamp": date_end.strftime("%Y-%m-%dT%H:%M:%S.000+00:00")}
+            {"time_stamp": date_end.strftime("%Y-%m-%dT%H:%M:%S")}
         )
         if one_stat:
             result.append(schemas.GetStat(**one_stat))
@@ -65,26 +66,39 @@ def make_stat_list(time_interval: schemas.TimeInterval, db):
 
 
 config = Config()
+critical_values=schemas.CriticalConfig().model_dump()
+critical_values['type']='params'
 db = get_database(config.MONGO_URL)
+db['critical'].insert_one(dict(critical_values))
 
 
-@app.get("/current_stat", response_model=schemas.GetStat)
+
+@app.get("/current_stat")
 async def current_stat():
     current_time = datetime.datetime.now()
     pseudo_current_time = current_time+datetime.timedelta(hours=3)-datetime.timedelta(seconds=5)
-
+    print(pseudo_current_time.strftime("%Y-%m-%dT%H:%M:%S"))
     data = db["stats"].find_one(
-        {"time_stamp": pseudo_current_time.strftime("%Y-%m-%dT%H:%M:%S.000+00:00")}
-    )
-    return schemas.GetStat(**data)
+            {"time_stamp": pseudo_current_time.strftime("%Y-%m-%dT%H:%M:%S")}
+        )
+     
+    if data:
+        return schemas.GetStat(**data)
+    return data
 
 
 @app.post("/time_interval_values", response_model=list[schemas.GetStat])
 def get_time_interval_values(time_interval: schemas.TimeInterval):
-
+    
     return make_stat_list(time_interval=time_interval, db=db)
 
-# @app.post('set_ctitycal/')
-#     return {}
+@app.post('/add_critical')
+def add_critical(critical_params: schemas.CryticalSetter):
+    res={'type':'params'}
+    for k,v in critical_params.model_dump().items():
+        res[k]=float(v)
+    db['critical'].drop()
+    db['critical'].insert_one(res)
+    return {'status':'ok'}
 
 uvicorn.run(app=app, host="0.0.0.0")
