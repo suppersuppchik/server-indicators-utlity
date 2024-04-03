@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import time
 import threading
 import random
-
+import psutil
 app = fastapi.FastAPI()
 
 
@@ -38,7 +38,7 @@ def get_database(CONNECTION_STRING):
 
 data_storage = dict()
 pseudo_current_time: datetime.datetime
-DEBUG_MODE = False
+DEBUG_MODE = True
 REDIS_MODE = False
 SECONDS_STAP = 1
 db = get_database(Config().MONGO_URL)
@@ -56,7 +56,7 @@ def system_listenner():
             "%Y-%m-%dT%H:%M:%S"
         )
         time_stamp_as_int = int(pseudo_current_time_str_as_id)
-        if not DEBUG_MODE:
+        if DEBUG_MODE:
             data = schemas.SetStat(
                 time_stamp=pseudo_current_time_str_as_time_stamp,
                 time_stamp_as_int=time_stamp_as_int,
@@ -66,9 +66,20 @@ def system_listenner():
                 gpu_busy=random.uniform(1.00, 100.0),
                 ram_busy=random.uniform(1.00, 100.0),
             )
-        if DEBUG_MODE:
+            
             data_storage[pseudo_current_time_str_as_id] = data.model_dump()
         else:
+            stats = psutil.sensors_temperatures()
+            stat={
+            'time_stamp':pseudo_current_time_str_as_time_stamp,
+             'time_stamp_as_int':time_stamp_as_int,
+            'cpu_temp':stats["k10temp"][0].current,
+            'gpu_temp':stats["amdgpu"][0].current,
+            'cpu_busy':float(psutil.cpu_percent()),
+            'gpu_busy':float(0),
+            'ram_busy':float(psutil.virtual_memory().percent),
+            }
+            data=schemas.GetStat(**stat)
             db["stats"].insert_one(data.model_dump())
         last_current_time_as_int = time_stamp_as_int
         print("Работаю ")
