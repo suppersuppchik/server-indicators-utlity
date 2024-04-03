@@ -38,8 +38,8 @@ def get_database(CONNECTION_STRING):
 
 data_storage = dict()
 pseudo_current_time: datetime.datetime
-DEBUG_MODE = True
-REDIS_MODE = False
+DEBUG_MODE = False
+
 SECONDS_STAP = 1
 db = get_database(Config().MONGO_URL)
 last_current_time_as_int: int
@@ -66,8 +66,7 @@ def system_listenner():
                 gpu_busy=random.uniform(1.00, 100.0),
                 ram_busy=random.uniform(1.00, 100.0),
             )
-            
-            data_storage[pseudo_current_time_str_as_id] = data.model_dump()
+            db["stats"].insert_one(data.model_dump())
         else:
             stats = psutil.sensors_temperatures()
             stat={
@@ -79,7 +78,8 @@ def system_listenner():
             'gpu_busy':float(0),
             'ram_busy':float(psutil.virtual_memory().percent),
             }
-            data=schemas.GetStat(**stat)
+            data=schemas.SetStat(**stat)
+          
             db["stats"].insert_one(data.model_dump())
         last_current_time_as_int = time_stamp_as_int
         print("Работаю ")
@@ -126,6 +126,7 @@ def make_stat_list(time_interval):
 @app.get("/current_stat", response_model=schemas.GetStat)
 async def current_stat():
     global last_current_time_as_int
+    print(last_current_time_as_int)
     return schemas.GetStat(
         **db["stats"].find_one({"time_stamp_as_int": last_current_time_as_int})
     )
