@@ -38,7 +38,7 @@ def get_database(CONNECTION_STRING):
 
 data_storage = dict()
 pseudo_current_time: datetime.datetime
-DEBUG_MODE = False
+DEBUG_MODE = True
 
 SECONDS_STAP = 1
 db = get_database(Config().MONGO_URL)
